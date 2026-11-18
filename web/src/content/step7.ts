@@ -9,7 +9,7 @@ export const step7 = {
       <h2>7.1 What an outline is, geometrically</h2>
       <p>An ink outline sits where the surface <b>turns away from you</b>: the silhouette. At those points N·V (normal · direction to the camera) crosses 0.
       A shader runs one pixel at a time, and a pixel can't see its neighbours, so it can't tell \"I am next to an edge\" cheaply.
-      The standard game trick avoids the question entirely by adding <b>geometry</b> instead of shading:</p>
+      The obvious per-pixel attempt, darkening wherever N·V is small, gives a line whose width depends on curvature: a broad smear where a gently curved surface turns away, almost nothing where an edge is sharp. The standard game trick avoids the question entirely by adding <b>geometry</b> instead of shading:</p>
       <ol>
         <li>Make a copy of the mesh and push every vertex outward along its normal by a small width <i>w</i>. That's a slightly fatter shell around the body.</li>
         <li>Paint the shell black, and draw only the faces of the shell that point <b>away</b> from the camera.</li>

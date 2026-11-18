@@ -28,7 +28,7 @@ export const step11 = {
       <p>Air with particles in it absorbs or scatters a fixed fraction of light per metre. If a fraction σ is lost per metre, the light left after distance <i>t</i> obeys
       dI/dt = −σI, so I = I₀ e<sup>−σt</sup>. That e<sup>−σt</sup> is the <b>transmittance</b> T. HDRP describes σ through its <b>mean free path</b>: 80 m here,
       meaning σ = 1/80 per metre, the distance at which only e<sup>−1</sup> = 37% gets through.</p>
-      <p>HDRP's fog is also <b>thinner with height</b>: σ(<i>h</i>) = (1/80) · e<sup>−(h − base)/H</sup>. Along a slanted ray σ changes, so instead of σ·<i>t</i> we integrate it.
+      <p>HDRP's fog is also <b>thinner with height</b>: σ(<i>h</i>) = (1/80) · e<sup>−(h − base)/H</sup>. <i>H</i>, the scale height, comes from the fog's Maximum Height (50 m): <i>H</i> = 50 × 0.1448 ≈ 7.2 m. Along a slanted ray σ changes, so instead of σ·<i>t</i> we integrate it, with <i>t</i> capped at the fog's max distance, 70 m.
       For an exponential the integral has a closed form, with <i>k</i> = <i>t</i> · cos(angle to vertical) / <i>H</i>:</p>
       <p style="text-align:center"><b>optical depth = σ<sub>camera</sub> · <i>t</i> · (1 − e<sup>−k</sup>) / <i>k</i></b>, &nbsp; T = e<sup>−optical depth</sup></p>
       <p>(1 − e<sup>−k</sup>)/<i>k</i> is the average of the exponential along the ray: 1 for a horizontal ray, smaller for rays climbing into thinner air.</p>
@@ -40,8 +40,8 @@ export const step11 = {
       ${shot('s11_fog', 'The fog group, inserted after the mask Mix. Position comes from the Position pass.')}
       ${shot('s11_fog_group', 'Inside HDRP Height Fog: ray length, slope, the closed-form integral, then image × e^(−depth).')}
       ${box('num', 'How much it does here', `<p>The character is about 1.8 m from the camera: T ≈ e<sup>−1.8/80</sup> ≈ 0.98, so 2% darker. The backdrop wall is further and loses a bit more.
-      It's a small effect, but it's what separates the figure from the background slightly. Unity's fog also adds back scattered light of its own colour.
-      In this scene that term is too small to see, so the group only applies the loss.</p>`)}
+      It's a small effect, but it's what separates the figure from the background slightly. Unity's fog also adds back light scattered toward the camera.
+      Our group applies only the loss, and the final image still matches Unity closely (step 12), so whatever that term adds is small here.</p>`)}
     `),
     sec({ mode: 'toon', lv: 112, cam: 'shot', label: 'Depth of field: the background blurs (Compare to see it; this viewer skips the blur)', ref: 's11_dof' }, `
       <h2>11.3 Depth of field: a blur that grows with distance</h2>

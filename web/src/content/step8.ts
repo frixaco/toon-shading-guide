@@ -18,7 +18,7 @@ export const step8 = {
     sec({ mode: 'toon', lv: 80, show: 'falloff', label: 'HDRP falloff per lamp, as RGB: red = Spot (2), green = Spot (1), blue = Spot (3)' }, `
       <h2>8.2 Data on the lamp: custom properties</h2>
       ${box('do', 'Do this', `<ol>
-        <li>Delete both suns. Add three <b>Spot</b> lights at the positions in <code>step8.blend</code>: Spot Size 90.5°, Blend 0, Radius 0.025 m, any Power above 0.</li>
+        <li>Delete both suns. Add three <b>Spot</b> lights at the positions in <code>step8.blend</code>: Spot Size 90.5°, Blend 0, Radius 0.025 m, any Power above 0. (90.5° is HDRP's full cone, so Blender's own cutoff lands exactly where HDRP's cone reaches 0. Power only has to be non-zero; our nodes compute the brightness.)</li>
         <li>On each, Object properties → <b>Custom Properties</b> → <b>New</b>, and add the six values shown: <code>hd_color</code>, <code>fwd</code>, <code>angle_scale</code>,
           <code>angle_offset</code>, <code>range_scale</code>, <code>channel</code>.</li>
       </ol>`)}
@@ -40,7 +40,7 @@ export const step8 = {
           The window forces it to exactly 0 at the lamp's range (here 1/√0.01 = 10 m) while staying ≈1 close by.</li>
         <li><b>cone</b> = clamp(cos θ · 3.6 − 2.535, 0, 1), θ = angle between the lamp's axis and the ray to the point. Linear in cos θ: 1 inside 10.9°, 0 beyond 45.2° (half of the 90.5° cone).</li>
       </ul>
-      <p>The squares make each factor's edge fade in smoothly instead of with a kink, the same reason smoothstep beat a straight line in step 4.</p>
+      <p>Why squared? A clamped straight line hits 0 with a corner. Its square, t², has slope 0 at t = 0, so the pool's edge fades out without a visible seam: the same reason smoothstep beat a straight line in step 4.</p>
       ${widget('falloff')}
       ${box('do', 'Build it as a group', `<ol>
         <li>Build the nodes in the material, select them and press <kbd>Ctrl G</kbd> to turn them into a group named <code>HDRP Spot Falloff</code>
@@ -64,7 +64,7 @@ export const step8 = {
       </ol>`)}
       ${shot('s8_lightcolor', 'Light attribute hd_color × 0.67 replaces Light Info.')}
       ${shot('s8_falloff', 'shade colour × light colour × Toon Falloff → Diffuse Light.')}
-      <p>Compare: the body is blown out to white. The tree is right. The numbers are physical: Spot (2) delivers 16 to 26 units of light where our suns delivered 1.
+      <p>Compare: the body is blown out to white. The tree is right. The numbers are physical: Spot (2)'s hd_color is (16.3, 7.9, 26.5), and the test suns gave 1.
       HDRP works in real photometric units and an exposure, and SakuraRabbit compensated in the material.</p>
     `),
     sec({ mode: 'toon', lv: 81, knob: 'power', label: 'Albedo × Color Power 0.15', ref: 's8_sum' }, `

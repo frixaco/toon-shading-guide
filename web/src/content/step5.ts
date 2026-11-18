@@ -19,7 +19,7 @@ export const step5 = {
     sec({ mode: 'toon', lv: 51, show: 'vis', pink: false, label: 'Seeing: smoothstep(0, 1, shadow) for the white sun. Black = something blocks the light' }, `
       <h2>5.2 Asking \"can I see the light?\": Shadow Raycast</h2>
       <p>The only way to answer question 2 is to look: shoot a ray from the point toward the light and check whether it hits anything first.
-      EEVEE does that with its shadow maps, and Blender 5 exposes the result to node trees as <b>Shadow Raycast</b>.
+      EEVEE already does that for every lamp to draw ordinary shadows, and Blender 5 hands the answer to node trees as <b>Shadow Raycast</b>.
       Like Light Evaluation, it only means something inside Light Accumulation, because \"the light\" is the lamp currently being processed.
       Its <b>Color</b> output is 1 where the light is visible and 0 where it's blocked, with soft values at penumbra edges.</p>
       ${box('do', 'Do this', `<ol>
@@ -32,7 +32,7 @@ export const step5 = {
         shading edge in step 4, so both kinds of edge look alike. Unity's code is <code>smoothstep(lerp(0, 0.6, h), lerp(1, 0.6, h), shadow)</code>
         with shadow hardness <i>h</i> = 0, which is exactly smoothstep(0, 1, ·). Raising <i>h</i> would squeeze the interval toward 0.6 and sharpen the edge.</p>`)}
       ${box('num', 'Why Softness 0?', `
-        <p>The node's Softness widens the shadow by sampling the light as a larger disc. The Unity original uses ordinary hard shadow maps,
+        <p>Softness is an extra blur on top of what the lamp's own size produces. Unity's shader has no such knob,
         and the lamps themselves already have a small radius (step 8), so we let the light's own size decide.</p>`)}
     `),
     sec({ mode: 'toon', lv: 51, pink: false, label: 'Step 5 result: cast shadows are back, using the same shadow tone', ...REF }, `

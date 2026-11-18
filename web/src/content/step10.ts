@@ -19,7 +19,7 @@ export const step10 = {
         <li><b>N</b>: the mesh normal, straight out.</li>
       </ul>
       <p>Each pixel stores (x, y) of that direction in R and G. A colour channel holds 0 … 1 and a direction component −1 … 1, so it was stored as d × 0.5 + 0.5
-      (the same squeeze again, run backwards: d = c × 2 − 1). z is not needed: the direction has length 1 and points outward, so z = √(1 − x² − y²).
+      (the same squeeze again, run backwards: d = c × 2 − 1). z doesn't have to be read: the direction has length 1 and points outward, so z = √(1 − x² − y²). Unity rebuilds z this way (it's how it decodes compressed normal maps), so we do too.
       Then the world-space normal is just the local coordinates times the frame's axes:</p>
       <p style="text-align:center;font-size:18px"><b>N′ = normalize(x·T + y·B + z·N)</b></p>
       <p>That's a change of basis, a 3×3 matrix with T, B, N as columns, written as three scale-and-add steps.</p>
@@ -37,7 +37,7 @@ export const step10 = {
       </ol>`)}
       ${shot('s10_normal', 'Sweater: Sweater_Normal (Non-Color) → Unity Normal Map → Dot Product and the matcap.')}
       ${box('why', 'Why Non-Color?', `<p>An sRGB image is decoded with the screen curve on load: 0.5 stored becomes 0.214. For a picture that's right; for stored numbers it corrupts them.
-      Non-Color reads the numbers as written. The same applies to the outline mask in step 7.</p>`)}
+      Non-Color reads the numbers as written.</p>`)}
     `),
     sec({ mode: 'toon', lv: 100, show: 'rim', knob: 'rim', label: 'The rim mask per lamp (R/G/B = Spot 2/1/3): edge-facing × lit × in the pool' }, `
       <h2>10.3 Rim light: brighten the edges facing away from you</h2>

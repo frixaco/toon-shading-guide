@@ -20,8 +20,8 @@ export const step6 = {
       <p>To use it, for each pixel: take the surface normal, find the point on the ball that faces the same way, read the colour there.</p>
       <h3>Finding the point on the ball</h3>
       <p>The direction must be measured <b>relative to the camera</b>, because the picture is of a ball seen from the front.
-      In camera space, x points right, y up, z toward the viewer. A unit sphere's point with normal (x, y, z) is at position (x, y, z),
-      and seen from the front it appears at screen position (x, y), each in −1 … 1. The image's UV coordinates run 0 … 1, so:</p>
+      In camera space, x points right and y up on the screen. A unit sphere's point with normal (x, y, z) is at position (x, y, z),
+      and seen from the front without perspective (the way the matcap ball is painted) it appears at screen position (x, y), each in −1 … 1. The image's UV coordinates run 0 … 1, so:</p>
       <p style="text-align:center;font-size:18px"><b>uv = normal<sub>camera</sub>.xy × 0.5 + 0.5</b></p>
       <p>It's the same −1…1 → 0…1 squeeze as the half Lambert in step 3, applied to two coordinates.</p>
       ${box('do', 'Do this (Skin and Sweater)', `<ol>

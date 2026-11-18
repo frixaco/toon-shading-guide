@@ -6,7 +6,7 @@ export const step12 = {
     sec({ mode: 'toon', lv: 120, cam: 'shot', label: 'AO tint: occluded creases pulled toward a warm red (Compare to see it)', ref: 's12_ao' }, `
       <h2>12.1 Ambient occlusion, used as a colour</h2>
       <p><b>Ambient occlusion</b> (AO) is the fraction of directions around a point that are <i>open</i>: 1 on an exposed surface, smaller in creases, armpits, where the sweater meets the skin.
-      EEVEE computes it from the depth buffer by probing a small hemisphere around each pixel (distance 0.25 m here) and writes it to the AO pass.</p>
+      EEVEE estimates it on screen, looking up to a set distance from each point (0.25 m here), and writes it to the AO pass.</p>
       <p>Unity doesn't darken with it. It <b>tints</b>: <code>lighting × lerp(SSAO colour, white, AO)</code>, with the colour (0.78, 0.43, 0.43), a warm red.
       Creases get redder rather than greyer, like light bouncing inside skin. It's the same \"shadow has a colour\" idea as the 0.363 shadow tone, applied to contact shadows.</p>
       ${box('do', 'Do this', `<ol>
