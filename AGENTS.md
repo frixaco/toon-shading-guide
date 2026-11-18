@@ -71,15 +71,18 @@ The shell is PowerShell. Python exists only inside Blender:
 
 ## Deploy
 
-The Railway service is `toon-guide` in the `main` project (workspace `personal`). It deploys from the local folder, so the gitignored assets go up too. Pushing to GitHub does not deploy.
+Two Railway services in the `main` project (workspace `personal`):
 
-From `web/`:
+- **`toon-guide`** serves the site. Railway builds it from GitHub (`main`, root `Dockerfile`) on every push, so pushing deploys code and text changes.
+  - `web/Caddyfile` serves the built app.
+  - Any path that isn't a built file is forwarded to `toon-guide-assets.railway.internal:8080`.
+- **`toon-guide-assets`** serves `web/public/` (model, textures, renders, screenshots, `.blend` files), which is not in Git.
+  - It uses `web/Dockerfile.assets`, selected by the service variable `RAILWAY_DOCKERFILE_PATH`, with `PORT=8080`.
+  - Redeploy it from this machine, from `web/`, only after `build_guide.py` or `shots.py` changed something:
 
 ```powershell
-railway link -w personal -p main -s toon-guide   # once per machine
-railway up --no-gitignore --service toon-guide --ci
+railway link -w personal -p main   # once per machine
+railway up --no-gitignore --service toon-guide-assets --ci
 ```
 
-`web/Dockerfile` builds the app with Node and serves `dist/` with Caddy on `$PORT`. `.railwayignore` keeps `node_modules` and `dist` out of the upload.
-
-Deploy only when asked.
+`.railwayignore` keeps `node_modules` and `dist` out of that upload. Pushing is a deploy, so push only when asked.

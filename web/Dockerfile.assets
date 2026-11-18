@@ -1,0 +1,6 @@
+# The toon-guide-assets service: serves web/public (model, renders, screenshots, .blend files).
+# These are built locally by blender/*.py and are not in Git, so this service is deployed from
+# this machine with `railway up --no-gitignore --service toon-guide-assets` from web/.
+FROM caddy:2-alpine
+COPY public /srv
+CMD ["caddy", "file-server", "--root", "/srv", "--listen", ":8080"]

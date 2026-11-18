@@ -1,0 +1,16 @@
+{
+	admin off
+}
+
+:{$PORT:8080} {
+	root * /srv
+	# the built app (index.html, /assets/index-*.js and .css)
+	@built file
+	handle @built {
+		file_server
+	}
+	# everything else is a generated asset, served by toon-guide-assets over Railway's private network
+	handle {
+		reverse_proxy {$ASSETS_UPSTREAM:toon-guide-assets.railway.internal:8080}
+	}
+}
