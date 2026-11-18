@@ -24,7 +24,9 @@ function canvas(host: HTMLElement, w: number, h: number) {
   host.append(c);
   const g = c.getContext('2d')!;
   g.scale(r, r);
-  return { c, g };
+  // labels are 13 px at full size; a phone shows the canvas at about half size, so they grow up to 1.5x
+  const font = () => (g.font = `${13 * Math.min(1.5, Math.max(1, w / (c.clientWidth || w)))}px system-ui`);
+  return { c, g, font };
 }
 
 function slider(host: HTMLElement, label: string, min: number, max: number, step: number, value: number, on: (v: number) => void) {
@@ -53,6 +55,14 @@ function arrow(g: CanvasRenderingContext2D, x0: number, y0: number, x1: number, 
   g.fill();
 }
 
+// a line of coloured labels under a canvas: HTML, so it wraps on a narrow screen
+function legend(host: HTMLElement, items: [string, string][]) {
+  const d = document.createElement('div');
+  d.className = 'wleg';
+  d.innerHTML = items.map(([t, col]) => `<span style="color:${col}">${t}</span>`).join('');
+  host.append(d);
+}
+
 function readout(host: HTMLElement) {
   const d = document.createElement('div');
   d.className = 'wread';
@@ -63,7 +73,7 @@ function readout(host: HTMLElement) {
 // ---------------------------------------------------------------- Lambert: a beam spreads when tilted
 function lambert(host: HTMLElement) {
   const W = 600, H = 270;
-  const { c, g } = canvas(host, W, H);
+  const { c, g, font } = canvas(host, W, H);
   const out = readout(host);
   let th = 50;
   const cx = W / 2, gy = 205, beam = 110;
@@ -82,7 +92,7 @@ function lambert(host: HTMLElement) {
     arrow(g, cx, gy, cx, gy - 120, '#6ea8ff', 2);
     g.setLineDash([]);
     g.fillStyle = '#6ea8ff';
-    g.font = '13px system-ui';
+    font();
     g.fillText('normal', cx + 6, gy - 108);
     if (cos > 0.02) {
       const half = beam / 2 / cos;
@@ -104,7 +114,8 @@ function lambert(host: HTMLElement) {
     }
   };
   slider(host, 'tilt the light', -120, 120, 1, th, (v) => { th = v; draw(); });
-  c.onpointermove = (e) => {
+  c.style.touchAction = 'none'; // dragging on the drawing turns the arrow instead of scrolling
+  c.onpointerdown = c.onpointermove = (e) => {
     if (!e.buttons) return;
     const r = c.getBoundingClientRect();
     const x = ((e.clientX - r.left) / r.width) * W - cx, y = gy - ((e.clientY - r.top) / r.height) * H;
@@ -112,19 +123,19 @@ function lambert(host: HTMLElement) {
     (host.querySelector('input') as HTMLInputElement).value = String(th);
     draw();
   };
-  draw();
+  new ResizeObserver(draw).observe(c); // draws now, and again when the label size changes
 }
 
 // ---------------------------------------------------------------- Color Ramp, Constant: a staircase
 function ramp(host: HTMLElement) {
   const W = 600, H = 190;
-  const { g } = canvas(host, W, H);
+  const { c, g, font } = canvas(host, W, H);
   const out = readout(host);
   let v = 0.42, stop = 0.15;
   const x0 = 40, x1 = W - 40, X = (t: number) => x0 + t * (x1 - x0);
   const draw = () => {
     g.clearRect(0, 0, W, H);
-    g.font = '13px system-ui';
+    font();
     g.fillStyle = '#c9d1dc';
     g.fillText('Fac (in): the light Shader to RGB measured', x0, 18);
     for (let i = 0; i < 256; i++) {
@@ -155,13 +166,13 @@ function ramp(host: HTMLElement) {
   };
   slider(host, 'measured light', 0, 1, 0.01, v, (x) => { v = x; draw(); });
   slider(host, 'white stop position', 0, 1, 0.01, stop, (x) => { stop = x; draw(); });
-  draw();
+  new ResizeObserver(draw).observe(c); // draws now, and again when the label size changes
 }
 
 // ---------------------------------------------------------------- dot product and the x0.5+0.5 remap
 function dot(host: HTMLElement) {
   const W = 600, H = 330;
-  const { c, g } = canvas(host, W, H);
+  const { c, g, font } = canvas(host, W, H);
   const out = readout(host);
   let th = 60;
   const cx = 150, cy = 230, R = 115;
@@ -181,9 +192,10 @@ function dot(host: HTMLElement) {
     g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, cy - d * R); g.stroke();
     arrow(g, cx, cy, cx, cy - R, '#6ea8ff', 2.5);
     arrow(g, cx, cy, cx + Math.sin(t) * R, cy - Math.cos(t) * R, '#ffd54a', 2.5);
-    g.font = '13px system-ui';
+    font();
     g.fillStyle = '#6ea8ff'; g.fillText('N (normal)', cx + 6, cy - R - 6);
-    g.fillStyle = '#ffd54a'; g.fillText('L (to the light)', cx + Math.sin(t) * (R + 8) - 30, cy - Math.cos(t) * (R + 14));
+    const lt = 'L (to the light)'; // ends where the number lines start, even with the larger phone font
+    g.fillStyle = '#ffd54a'; g.fillText(lt, Math.min(cx + Math.sin(t) * (R + 8) - 30, 308 - g.measureText(lt).width), cy - Math.cos(t) * (R + 14));
     // number lines
     const lx0 = 320, lx1 = 580, LX = (u: number) => lx0 + u * (lx1 - lx0);
     const line = (y: number, a: string, b: string, mid: string) => {
@@ -208,7 +220,8 @@ function dot(host: HTMLElement) {
     out.innerHTML = `N = (${nx}, ${ny}), L = (${lx.toFixed(2)}, ${ly.toFixed(2)}). N·L = ${nx}×${lx.toFixed(2)} + ${ny}×${ly.toFixed(2)} = <b>${d.toFixed(2)}</b> = cos(${th.toFixed(0)}°). Remapped: ${d.toFixed(2)}×0.5+0.5 = <b>${r.toFixed(3)}</b> → ${lit ? '≥' : '&lt;'} 0.575 → <b>${lit ? 'lit' : 'shadow'}</b> <span class="sw" style="background:${grey(lit ? 1 : GREY)}"></span>`;
   };
   slider(host, 'angle between N and L', 0, 180, 1, th, (v) => { th = v; draw(); });
-  c.onpointermove = (e) => {
+  c.style.touchAction = 'none'; // dragging on the drawing turns the arrow instead of scrolling
+  c.onpointerdown = c.onpointermove = (e) => {
     if (!e.buttons) return;
     const r = c.getBoundingClientRect();
     const x = ((e.clientX - r.left) / r.width) * W - cx, y = cy - ((e.clientY - r.top) / r.height) * H;
@@ -216,7 +229,7 @@ function dot(host: HTMLElement) {
     (host.querySelector('input') as HTMLInputElement).value = String(th);
     draw();
   };
-  draw();
+  new ResizeObserver(draw).observe(c); // draws now, and again when the label size changes
 }
 
 // ---------------------------------------------------------------- step vs line vs smoothstep (the shadow edge)
@@ -225,8 +238,9 @@ function plotAxes(g: CanvasRenderingContext2D, x0: number, y0: number, w: number
   g.strokeRect(x0, y0, w, h);
 }
 function smooth(host: HTMLElement) {
-  const W = 600, H = 300;
-  const { g } = canvas(host, W, H);
+  const W = 600, H = 268;
+  const { c, g, font } = canvas(host, W, H);
+  legend(host, [['x = remapped N·L.', '#8a93a3'], ['smoothstep', '#ffd54a'], ['straight line (kinks at both ends)', '#6ea8ff'], ['step (Constant ramp)', '#8a93a3']]);
   const out = readout(host);
   let hard = 0.688;
   const x0 = 50, y0 = 20, pw = 520, ph = 200, lo = 0.35, hi = 0.8;
@@ -249,23 +263,19 @@ function smooth(host: HTMLElement) {
       const x = lo + (i / 260) * (hi - lo);
       g.fillStyle = grey(GREY + (1 - GREY) * ss(a, b, x)); g.fillRect(X(x), y0 + ph + 18, pw / 260 + 1, 22);
     }
-    g.font = '13px system-ui'; g.fillStyle = '#8a93a3';
+    font(); g.fillStyle = '#8a93a3';
     for (const v of [0.4, 0.5, 0.6, 0.7, 0.8]) g.fillText(v.toFixed(1), X(v) - 9, y0 + ph + 14);
-    const ly = H - 12;
-    g.fillText('x = remapped N·L.', x0, ly);
-    g.fillStyle = '#ffd54a'; g.fillText('smoothstep', x0 + 120, ly);
-    g.fillStyle = '#6ea8ff'; g.fillText('straight line (kinks at both ends)', x0 + 205, ly);
-    g.fillStyle = '#8a93a3'; g.fillText('step (Constant ramp)', x0 + 420, ly);
     out.innerHTML = `Edge from <b>${a.toFixed(3)}</b> to <b>${b.toFixed(3)}</b> (N·L ${(2 * a - 1).toFixed(2)} … ${(2 * b - 1).toFixed(2)}, i.e. ${(Math.acos(2 * a - 1) * 180 / Math.PI).toFixed(0)}° … ${(Math.acos(2 * b - 1) * 180 / Math.PI).toFixed(0)}° from the light). The strip is the resulting tone, shadow 0.363 → lit.`;
   };
   slider(host, 'hardness', 0, 0.98, 0.01, hard, (v) => { hard = v; draw(); });
-  draw();
+  new ResizeObserver(draw).observe(c); // draws now, and again when the label size changes
 }
 
 // ---------------------------------------------------------------- HDRP spot falloff: distance and cone
 function falloff(host: HTMLElement) {
-  const W = 600, H = 250;
-  const { g } = canvas(host, W, H);
+  const W = 600, H = 204;
+  const { c, g, font } = canvas(host, W, H);
+  legend(host, [['attenuation (physical)', '#6ea8ff'], ['toon falloff = smoothstep(min(·, 1))', '#ffd54a']]);
   const out = readout(host);
   let d = 1.5, th = 20;
   const AS = 3.59995127, AO = -2.53499126, RS = 0.01;
@@ -285,21 +295,19 @@ function falloff(host: HTMLElement) {
       g.stroke();
     }
     g.strokeStyle = '#ff5aa8'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X(cur), y0); g.lineTo(X(cur), y0 + ph); g.stroke();
-    g.font = '13px system-ui'; g.fillStyle = '#c9d1dc'; g.fillText(title, x0, 20);
+    font(); g.fillStyle = '#c9d1dc'; g.fillText(title, x0, 20);
     g.fillStyle = '#8a93a3'; g.fillText('0', x0 - 3, y0 + ph + 16); g.fillText(`${xmax}${unit}`, x0 + pw - 22, y0 + ph + 16); g.fillText('1', x0 - 12, Y(1) + 4);
   };
   const draw = () => {
     g.clearRect(0, 0, W, H);
     graph(40, `vs distance (at ${th}° off axis)`, 4, ' m', (x) => att(x, th), (x) => ss(Math.min(att(x, th), 1)), d);
     graph(330, `vs angle off axis (at ${d.toFixed(1)} m)`, 60, '°', (x) => att(d, x), (x) => ss(Math.min(att(d, x), 1)), th);
-    g.font = '13px system-ui'; g.fillStyle = '#6ea8ff'; g.fillText('attenuation (physical)', 40, H - 12);
-    g.fillStyle = '#ffd54a'; g.fillText('toon falloff = smoothstep(min(·, 1))', 220, H - 12);
     const a = att(d, th);
     out.innerHTML = `At ${d.toFixed(2)} m and ${th}°: attenuation <b>${a.toFixed(3)}</b> → toon falloff <b>${ss(Math.min(a, 1)).toFixed(3)}</b>. Inside about 1 m the physical value passes 1; the toon version stays flat at 1.`;
   };
   slider(host, 'distance (m)', 0.2, 4, 0.01, d, (v) => { d = v; draw(); });
   slider(host, 'angle off the lamp axis (°)', 0, 60, 1, th, (v) => { th = v; draw(); });
-  draw();
+  new ResizeObserver(draw).observe(c); // draws now, and again when the label size changes
 }
 
 const ALL: Record<string, (h: HTMLElement) => void> = { lambert, ramp, dot, smooth, falloff };

@@ -36,7 +36,9 @@ const KNOBS: Record<Knob, { label: string; min: number; max: number; step: numbe
   power: { label: 'Color Power', min: 0.02, max: 1, step: 0.01, def: S.colorPower },
   rim: { label: 'Rim threshold', min: 0, max: 1, step: 0.01, def: S.rim.threshold },
 };
-const SM = 4096, SSM = 2048;
+// Phones and tablets get half-size shadow maps and textures: about 125 MB of GPU memory instead of 420 MB.
+const SMALL_GPU = matchMedia('(pointer: coarse)').matches;
+const SM = SMALL_GPU ? 2048 : 4096, SSM = SMALL_GPU ? 1024 : 2048, MAX_TEX = SMALL_GPU ? 2048 : 4096;
 const v3 = (a: number[]) => new THREE.Vector3(a[0], a[1], a[2]);
 const DEF_DIR = v3(S.lights[0].dir).normalize();
 const DEF = {
@@ -296,7 +298,7 @@ export class Viewer {
     const ref = el('img', 'ref') as HTMLImageElement;
     const wipeLine = el('div', 'wipe-line');
     const loading = el('div', 'loading', 'Loading model…');
-    const hint = el('div', 'stage-hint', 'drag: orbit · right-drag: pan · wheel: zoom');
+    const hint = el('div', 'stage-hint', SMALL_GPU ? 'drag: orbit · pinch: zoom, pan' : 'drag: orbit · right-drag: pan · wheel: zoom');
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.stage.append(this.renderer.domElement, ref, wipeLine, label, hint, loading);
@@ -305,7 +307,8 @@ export class Viewer {
       <div class="row">
         <button data-k="resetView">Reset view</button>
         <label class="tog" data-k="pinkRow"><input type="checkbox" data-k="pink"> Pink sun</label>
-        <label class="tog" data-k="compareRow"><input type="checkbox" data-k="compare"> Compare with Blender render</label>
+        <label class="tog" data-k="compareRow"><input type="checkbox" data-k="compare"> Compare<span class="long"> with Blender render</span></label>
+        <button class="more" data-k="more" aria-expanded="false">Sliders</button>
       </div>
       <div class="row" data-k="wipeRow"><span>Blender ◀</span><input type="range" min="0" max="100" value="50" data-k="wipe"><span>▶ this viewer</span></div>
       <div class="row" data-k="sunRow">
@@ -320,7 +323,7 @@ export class Viewer {
       <div class="note" data-k="note"></div>`;
     root.append(this.stage, controls);
     for (const e of root.querySelectorAll<HTMLElement>('[data-k]')) this.ui[e.dataset.k!] = e;
-    Object.assign(this.ui, { label, ref, wipeLine, loading });
+    Object.assign(this.ui, { label, ref, wipeLine, loading, vc: controls });
 
     this.camera = new THREE.PerspectiveCamera(S.camera.fovY, S.camera.width / S.camera.height, 0.05, 200);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -396,7 +399,8 @@ export class Viewer {
   }
 
   private depthTarget(n: number) {
-    const rt = new THREE.WebGLRenderTarget(n, n);
+    // only the depth is read; a one-byte colour buffer instead of RGBA saves 3 bytes per texel
+    const rt = new THREE.WebGLRenderTarget(n, n, { format: THREE.RedFormat });
     rt.depthTexture = new THREE.DepthTexture(n, n);
     rt.depthTexture.type = THREE.UnsignedIntType;
     return rt;
@@ -406,6 +410,14 @@ export class Viewer {
     const tl = new THREE.TextureLoader();
     const tex = async (url: string, color = true, flipY = false) => {
       const t = await tl.loadAsync(url);
+      const im = t.image as HTMLImageElement;
+      if (im.width > MAX_TEX) {
+        const c = document.createElement('canvas');
+        c.width = MAX_TEX;
+        c.height = Math.round((im.height * MAX_TEX) / im.width);
+        c.getContext('2d')!.drawImage(im, 0, 0, c.width, c.height);
+        t.image = c as unknown as HTMLImageElement; // three uploads a canvas like an image
+      }
       t.flipY = flipY;
       t.colorSpace = color ? THREE.SRGBColorSpace : THREE.NoColorSpace;
       t.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
@@ -508,6 +520,11 @@ export class Viewer {
   private bindUI() {
     const inp = (k: string) => this.ui[k] as HTMLInputElement;
     this.ui.resetView.onclick = () => this.resetView();
+    this.ui.more.onclick = () => { // phones: the slider rows fold away to leave room for the text
+      const open = this.ui.vc.classList.toggle('open');
+      this.ui.more.textContent = open ? 'Hide sliders' : 'Sliders';
+      this.ui.more.setAttribute('aria-expanded', String(open));
+    };
     this.ui.resetSun.onclick = () => { Object.assign(this.p, { az: DEF.az, el: DEF.el }); this.sync(); };
     inp('pink').onchange = () => { this.p.pink = inp('pink').checked; this.sync(); };
     inp('compare').onchange = () => {
@@ -577,6 +594,7 @@ export class Viewer {
     show('thRow', ramped && !p.compare);
     show('greyRow', (ramped && s.stage !== 'tint' || s.mode === 'toon' && !s.show) && !p.compare);
     show('knobRow', !!s.knob && !p.compare);
+    show('more', ['sunRow', 'thRow', 'greyRow', 'knobRow'].some((k) => !this.ui[k].classList.contains('hidden')));
     const set = (k: string, v: number | boolean) => {
       const i = this.ui[k] as HTMLInputElement;
       if (typeof v === 'boolean') i.checked = v; else i.value = String(v);

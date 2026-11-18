@@ -49,10 +49,11 @@ th { background: var(--panel); }
 .pager { display: flex; justify-content: space-between; gap: 20px; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); }
 
 .widget { background: #111317; border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 16px 0; }
-.widget canvas { display: block; margin: 0 auto 8px; touch-action: none; }
+.widget canvas { display: block; margin: 0 auto 8px; }
 .wslider { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--dim); }
 .wslider span { min-width: 150px; } .wslider input { flex: 1; }
 .wread { font-size: 14.5px; margin-top: 6px; }
+.wleg { display: flex; flex-wrap: wrap; gap: 0 14px; max-width: 600px; margin: -4px auto 4px; padding-left: 7%; font-size: 13px; }
 .sw { display: inline-block; width: 22px; height: 16px; border-radius: 3px; vertical-align: -3px; border: 1px solid #555; }
 
 #viewer { --ar: 0.8889; position: sticky; top: 0; height: 100vh; padding: 14px 16px 14px 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
@@ -72,16 +73,51 @@ th { background: var(--panel); }
 .vc .row > input[type=range] { flex: 1; }
 .vc output { min-width: 42px; color: var(--text); font-variant-numeric: tabular-nums; }
 .vc button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; cursor: pointer; font: inherit; }
+.vc .more { display: none; }
 .hidden { display: none !important; }
 
 #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.88); display: grid; place-items: center; z-index: 10; cursor: zoom-out; }
 #lightbox[hidden] { display: none; }
 #lightbox img { max-width: 96vw; max-height: 96vh; }
 
+/* Phones and small tablets. main.ts repeats the portrait query to place the line that picks the active section. */
 @media (max-width: 1100px) {
-  #app { grid-template-columns: 1fr; }
-  #nav { position: static; height: auto; border: 0; }
-  #viewer { --ar: 0.8889; position: sticky; top: 0; height: auto; z-index: 2; background: var(--bg); padding: 8px; }
-  .stage { width: min(100%, calc(45vh * var(--ar))); margin: 0 auto; }
-  #content { padding: 0 16px 80px; }
+  #app { grid-template-columns: minmax(0, 1fr); }
+  /* the step list becomes one row that scrolls sideways */
+  #nav { position: relative; height: auto; display: flex; gap: 2px; overflow-x: auto; padding: 6px 8px; border: 0; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+  #nav .brand, #nav .navnote { display: none; }
+  #nav a { flex: none; padding: 9px 12px; white-space: nowrap; }
+  /* the 3D view comes before the text and stays at the top while you read */
+  #viewer { order: 1; position: sticky; top: 0; height: auto; z-index: 2; background: var(--bg); padding: 8px; border-bottom: 1px solid var(--line); }
+  #content { order: 2; padding: 0 16px 80px; }
+  .stage { width: min(100%, calc(38vh * var(--ar))); width: min(100%, calc(38svh * var(--ar))); margin: 0 auto; }
+  .stage-label { font-size: 12px; padding: 3px 7px; left: 6px; top: 6px; }
+  .stage-hint { font-size: 11px; right: 6px; bottom: 4px; }
+  .vc { max-width: none; gap: 4px; }
+  .vc .long { display: none; }
+  .vc input[type=range] { min-width: 70px; }
+  .vc [data-k=sunRow] .lbl { min-width: 0; }
+  .vc [data-k=sunRow] label { flex: 1 1 0; min-width: 0; }
+  section { padding-left: 12px; }
+  .eye { border-radius: 10px; }
+  /* screenshots open larger than the screen (half their pixel size, where Blender's text reads well); drag to look around */
+  #lightbox { display: flex; overflow: auto; overscroll-behavior: contain; }
+  #lightbox img { margin: auto; max-width: none; max-height: none; width: max(100vw, calc(var(--nw, 0px) / 2)); }
+}
+/* phones held upright: the slider rows fold behind the Sliders button */
+@media (max-width: 1100px) and (orientation: portrait) and (max-height: 900px) {
+  .vc .more { display: inline-block; margin-left: auto; }
+  .vc:not(.open) :is([data-k=sunRow], [data-k=thRow], [data-k=knobRow], [data-k=greyRow]) { display: none; }
+}
+/* landscape: text on the left, the 3D view on the right, as on desktop */
+@media (max-width: 1100px) and (orientation: landscape) {
+  #app { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 0 16px; }
+  #nav { grid-column: 1 / -1; }
+  #content { grid-column: 1; grid-row: 2; }
+  #viewer { grid-column: 2; grid-row: 2; align-self: start; height: 100vh; height: 100svh; overflow-y: auto; padding: 8px 8px 8px 0; border: 0; }
+  .stage { flex: none; width: min(100%, calc((100vh - 70px) * var(--ar))); width: min(100%, calc((100svh - 70px) * var(--ar))); }
+}
+@media (pointer: coarse) {
+  .vc button { padding: 7px 12px; }
+  .vc input[type=checkbox] { width: 20px; height: 20px; }
 }
