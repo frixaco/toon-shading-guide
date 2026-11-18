@@ -1,0 +1,6 @@
+node_modules/
+dist/
+__pycache__/
+.amp/
+# Built from the licensed model by blender/build_guide.py and shots.py; kept local, uploaded only to the Railway deploy.
+web/public/
