@@ -5,7 +5,7 @@
 :{$PORT:8080} {
 	root * /srv
 	# the built app (index.html, /assets/index-*.js and .css)
-	@built file
+	@built file {path} {path}index.html
 	handle @built {
 		file_server
 	}
