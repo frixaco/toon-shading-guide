@@ -80,10 +80,18 @@ export const step1 = {
       It follows the oldest rule of shading, <b>Lambert's law</b>: brightness depends only on how directly the surface faces the light.
       Play with this:</p>
       ${widget('lambert')}
-      <p>Picture a flashlight beam with a fixed width. Point it straight at a wall and it makes a small, bright spot.
-      Tilt it and the same light spreads over a longer stretch, so each bit of wall gets less of it.
-      How much less is exactly <b>cos(angle)</b>. At 0° it's 1 (all of it), at 60° it's 0.5, and at 90° (grazing) it's 0.
-      Past 90° the light is hitting the other side of the surface, so it gets 0.</p>
+      <p>The key is what a pixel's brightness measures: <b>how much light lands on that one small bit of surface</b>, not how much light there is in total.
+      Light is a stream of energy, like rain. Hold a tray flat under vertical rain and it fills at some rate. Tilt the tray and fewer drops land in it per second,
+      even though it's the same tray in the same rain: tilted, it presents a smaller target to the falling drops. No drop is lost or bounced away; they just land elsewhere.</p>
+      <p>The widget does the same with light. The beam is 8 rays, each carrying the same amount, and the surface is cut into tiles.
+      Facing the light, the 8 rays land on 4 tiles: 2 rays per tile. Tilt it to <b>60°</b> and the same 8 rays land on <b>8 tiles</b>: 1 ray per tile.
+      Each tile, so each pixel looking at it, gets <b>half</b> as much. That's the 0.5. It's not "0.5 less"; it's "0.5 of the head-on amount".</p>
+      <p>Why exactly cos(angle)? Look at the pink dashed line: it's the beam's own width, drawn across the rays. It and the footprint on the surface form a right triangle
+      with the tilt angle at the corner. The footprint is the long side, so footprint = beam width / cos(angle). At 60°, cos is 0.5, so the footprint is twice the beam width,
+      and the light per tile is 1 / 2. At 0° it's 1 (all of it), and at 90° (grazing) the footprint is endless and each tile gets 0.
+      Past 90° the light hits the other side of the surface, so this side gets 0.</p>
+      <p>Two things are <i>not</i> involved: refraction (light bending as it passes into glass or water) and reflection off the top layer.
+      All the light that arrives is accounted for; the dimming is purely that it arrives spread over more area.</p>
       <p>Look at the 3D view: the model finally has <b>shape</b>. Brightness now depends on direction. The shoulder facing the sun is bright,
       and the side turned away fades smoothly into black. Drag <i>Sun turn</i> and <i>height</i> under the view and watch the bright side follow the sun.</p>
       ${box('why', 'Why is the dark side completely black?', `

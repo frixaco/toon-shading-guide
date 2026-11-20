@@ -70,60 +70,97 @@ function readout(host: HTMLElement) {
   return d;
 }
 
-// ---------------------------------------------------------------- Lambert: a beam spreads when tilted
+// ---------------------------------------------------------------- Lambert: count rays per tile
+// The beam is 8 parallel rays, each carrying the same amount of light. The surface is cut into tiles.
+// Facing the light, the beam lands on 4 tiles (2 rays each). Tilted, the same 8 rays spread over more tiles.
 function lambert(host: HTMLElement) {
-  const W = 600, H = 270;
-  const { c, g, font } = canvas(host, W, H);
+  const W = 600, H = 330;
+  const { c, g } = canvas(host, W, H);
   const out = readout(host);
-  let th = 50;
-  const cx = W / 2, gy = 205, beam = 110;
+  let th = 60;
+  const cx = 300, gy = 240, tile = 40, x0 = 20, x1 = 580, beam = 160, rays = 8;
+  // labels drawn on a dark backing so the rays don't run through them
+  const tag = (s: string, x: number, y: number, col: string) => {
+    g.font = '12px system-ui'; g.textAlign = 'left';
+    g.fillStyle = 'rgba(17,19,23,0.85)';
+    g.fillRect(x - 3, y - 11, g.measureText(s).width + 6, 15);
+    g.fillStyle = col; g.fillText(s, x, y);
+  };
   const draw = () => {
     g.clearRect(0, 0, W, H);
-    const t = rad(th), cos = Math.cos(t);
-    const dx = Math.sin(t), dy = -Math.cos(t); // screen direction from surface toward the light
-    // surface
-    g.fillStyle = '#2b2f36';
-    g.fillRect(30, gy, W - 60, 40);
-    g.strokeStyle = '#8a93a3';
-    g.lineWidth = 2;
-    g.beginPath(); g.moveTo(30, gy); g.lineTo(W - 30, gy); g.stroke();
+    const t = rad(th), cos = Math.cos(t), sin = Math.sin(t);
+    const lit = cos > 0.02;
+    const ux = sin, uy = -cos; // screen direction from the surface toward the light
+    const half = beam / 2 / Math.max(cos, 1e-3);
+    const fl = cx - half, fr = cx + half; // footprint on the surface
+    // tiles: brightness = light landing per tile, relative to a tile facing the light
+    g.font = '12px system-ui';
+    g.textAlign = 'center';
+    for (let x = x0; x < x1; x += tile) {
+      const cover = lit ? Math.max(0, Math.min(x + tile, fr) - Math.max(x, fl)) / tile : 0;
+      const v = cover * cos;
+      g.fillStyle = v > 0.005 ? grey(v) : '#1b1e24';
+      g.fillRect(x + 1, gy + 2, tile - 2, 30);
+      if (v > 0.005) {
+        g.fillStyle = v > 0.45 ? '#111' : '#ddd';
+        g.fillText(v.toFixed(2), x + tile / 2, gy + 21);
+      }
+    }
+    g.strokeStyle = '#8a93a3'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(x0, gy); g.lineTo(x1, gy); g.stroke();
     // normal
     g.setLineDash([5, 5]);
-    arrow(g, cx, gy, cx, gy - 120, '#6ea8ff', 2);
+    arrow(g, cx, gy, cx, gy - 150, '#6ea8ff', 2);
     g.setLineDash([]);
-    g.fillStyle = '#6ea8ff';
-    font();
-    g.fillText('normal', cx + 6, gy - 108);
-    if (cos > 0.02) {
-      const half = beam / 2 / cos;
-      const x0 = Math.max(30, cx - half), x1 = Math.min(W - 30, cx + half);
-      g.fillStyle = `rgba(255, 213, 74, ${0.25 + 0.75 * cos})`;
-      g.fillRect(x0, gy - 1, x1 - x0, 7);
-      for (let k = -3; k <= 3; k++) {
-        const hx = cx + (k / 3) * half;
-        if (hx < 30 || hx > W - 30) continue;
-        arrow(g, hx + dx * 190, gy + dy * 190, hx, gy - 2, 'rgba(255,213,74,0.85)', 1.6);
+    if (lit) {
+      // the rays, landing evenly spaced inside the footprint
+      for (let k = 0; k < rays; k++) {
+        const hx = cx + (-beam / 2 + beam / rays / 2 + (k * beam) / rays) / cos;
+        arrow(g, hx + ux * 260, gy + uy * 260, hx, gy - 2, 'rgba(255,213,74,0.9)', 1.6);
+        g.fillStyle = '#ffd54a'; g.beginPath(); g.arc(hx, gy, 3, 0, 7); g.fill();
       }
-      out.innerHTML = `Angle from the normal: <b>${th.toFixed(0)}°</b>. The same beam now covers <b>${(1 / cos).toFixed(2)}×</b> as much surface, so every spot gets <b>1 / ${(1 / cos).toFixed(2)} = ${cos.toFixed(2)}</b> of the light. That number is cos(${th.toFixed(0)}°). <span class="sw" style="background:${grey(cos)}"></span>`;
+      // the beam's own width: the short side of a right triangle whose long side is the footprint
+      if (Math.abs(th) > 3 && fl >= x0 && fr <= x1) {
+        const [sx, sy] = th > 0 ? [fr, gy] : [fl, gy];
+        const ex = sx + (th > 0 ? -1 : 1) * beam * cos, ey = sy - Math.abs(sin) * beam;
+        g.setLineDash([4, 3]); g.strokeStyle = '#ff5aa8'; g.lineWidth = 2;
+        g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.stroke(); g.setLineDash([]);
+        tag('beam width: 4 tiles', (sx + ex) / 2 + (th > 0 ? 8 : -124), (sy + ey) / 2, '#ff5aa8');
+      }
+      // footprint bracket
+      const bl = Math.max(fl, x0), br = Math.min(fr, x1);
+      g.strokeStyle = '#ffd54a'; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(bl, gy + 40); g.lineTo(bl, gy + 46); g.lineTo(br, gy + 46); g.lineTo(br, gy + 40); g.stroke();
+      g.fillStyle = '#ffd54a'; g.textAlign = 'center';
+      g.fillText(`lands on ${(2 * half / tile).toFixed(1)} tiles${fr > x1 ? ' (runs off the picture)' : ''}`, cx, gy + 62);
+      g.textAlign = 'left';
+      const n = (2 * half) / tile;
+      out.innerHTML = th === 0
+        ? `Tilt <b>0°</b>: facing the light. The beam is 8 rays, 4 tiles wide, and lands on exactly 4 tiles: <b>2 rays per tile</b>. Call that 1.00, the most a tile can get. Now drag the slider.
+          <span class="sw" style="background:${grey(1)}"></span>`
+        : `Tilt <b>${th.toFixed(0)}°</b>. The beam is always the same 8 rays, 4 tiles wide. Facing the light it lands on 4 tiles: <b>2 rays per tile</b>, and each tile gets 1.00.
+        Tilted, the same 8 rays land on <b>${n.toFixed(1)} tiles</b>, so each tile gets <b>8 / ${n.toFixed(1)} = ${(8 / n).toFixed(2)} rays</b>, which is <b>${cos.toFixed(2)}</b> of the head-on amount (cos ${Math.abs(th).toFixed(0)}° = ${cos.toFixed(2)}).
+        No light was lost: ${n.toFixed(1)} tiles × ${cos.toFixed(2)} ≈ 4 tiles × 1.00. It's just spread thinner, and a pixel shows how much light lands on <i>its</i> bit of surface.
+        <span class="sw" style="background:${grey(cos)}"></span>`;
     } else {
-      for (let k = -3; k <= 3; k++) {
-        const hx = cx + k * 18;
-        arrow(g, hx + dx * 190, gy + dy * 190, hx, gy + 42, 'rgba(255,213,74,0.35)', 1.4);
+      for (let k = 0; k < rays; k++) {
+        const hx = cx - beam / 2 + beam / rays / 2 + (k * beam) / rays;
+        arrow(g, hx + ux * 260, gy + uy * 260, hx + ux * 40, gy + uy * 40, 'rgba(255,213,74,0.3)', 1.4);
       }
-      out.innerHTML = `Angle <b>${th.toFixed(0)}°</b>: the light arrives from <i>behind</i> the surface. It cannot reach this side, so it gets <b>0</b>. (cos would be ${cos.toFixed(2)}; Blender clamps negatives to 0.) <span class="sw" style="background:#000"></span>`;
+      out.innerHTML = `Tilt <b>${th.toFixed(0)}°</b>: the light runs along or behind the surface, so no ray lands on this side. Every tile gets <b>0</b>.`;
     }
+    tag('normal', cx + 6, gy - 140, '#6ea8ff');
   };
-  slider(host, 'tilt the light', -120, 120, 1, th, (v) => { th = v; draw(); });
-  c.style.touchAction = 'none'; // dragging on the drawing turns the arrow instead of scrolling
-  c.onpointerdown = c.onpointermove = (e) => {
+  slider(host, 'tilt the light', -90, 90, 1, th, (v) => { th = v; draw(); });
+  c.onpointermove = (e) => {
     if (!e.buttons) return;
     const r = c.getBoundingClientRect();
     const x = ((e.clientX - r.left) / r.width) * W - cx, y = gy - ((e.clientY - r.top) / r.height) * H;
-    th = Math.round(deg(Math.atan2(x, y)));
+    th = Math.max(-90, Math.min(90, Math.round(deg(Math.atan2(x, y)))));
     (host.querySelector('input') as HTMLInputElement).value = String(th);
     draw();
   };
-  new ResizeObserver(draw).observe(c); // draws now, and again when the label size changes
+  draw();
 }
 
 // ---------------------------------------------------------------- Color Ramp, Constant: a staircase
